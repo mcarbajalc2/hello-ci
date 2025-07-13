@@ -1,6 +1,6 @@
 @Library('ci-pipelines') _
 
-deployNestJsPipeline(
+nestJsPipeline (
     imageName: 'hello-ci',
     hostPortProd: '9010',
     hostPortDev: '9011',
