@@ -1,0 +1,102 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hello-ci-${TAG}
+    networks:
+      - infra_default
+    ports:
+      - "${APP_PORT}:${CONTAINER_PORT}"
+    environment:
+      NODE_ENV: ${TAG}
+
+  db:
+    image: postgres:14
+    container_name: hello-ci-db-${TAG}
+    restart: always
+    networks:
+      - infra_default
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      POSTGRES_PASSWORD: supabase
+    volumes:
+      - db_data_${TAG}:/var/lib/postgresql/data
+
+  rest:
+    image: postgrest/postgrest:v11.2.0
+    container_name: hello-ci-rest-${TAG}
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - infra_default
+    ports:
+      - "${SUPABASE_API_PORT}:3000"
+    environment:
+      PGRST_DB_URI: postgres://postgres:supabase@db:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: super-secret-jwt
+
+  auth:
+    image: supabase/gotrue:v2.132.2
+    container_name: hello-ci-auth-${TAG}
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - infra_default
+    environment:
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:supabase@db:5432/postgres?sslmode=disable
+      GOTRUE_JWT_SECRET: super-secret-jwt
+      GOTRUE_SITE_URL: http://localhost:${APP_PORT}
+      GOTRUE_URI_ALLOW_LIST: '*'
+      GOTRUE_DISABLE_SIGNUP: 'false'
+
+  storage:
+    image: supabase/storage-api:v0.54.1
+    container_name: hello-ci-storage-${TAG}
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - infra_default
+    environment:
+      ANON_KEY: anon
+      SERVICE_KEY: service-role
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: super-secret-jwt
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: https://s3.amazonaws.com
+      S3_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+
+  studio:
+    image: supabase/studio:20240506-8e5738f
+    container_name: hello-ci-studio-${TAG}
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - infra_default
+    ports:
+      - "${SUPABASE_STUDIO_PORT}:3000"
+    environment:
+      STUDIO_PG_META_URL: http://rest:3000
+      SUPABASE_URL: http://localhost:${SUPABASE_API_PORT}
+      SUPABASE_ANON_KEY: anon
+      SUPABASE_SERVICE_KEY: service-role
+
+volumes:
+  db_data_production:
+  db_data_develop:
+
+networks:
+  infra_default:
+    external: true
