@@ -41,7 +41,7 @@ services:
       PGRST_JWT_SECRET: super-secret-jwt
 
   auth:
-    image: supabase/gotrue:v2.132.2
+    image: supabase/gotrue:v2.177.0
     container_name: hello-ci-auth-${TAG}
     restart: always
     depends_on:
@@ -57,7 +57,7 @@ services:
       GOTRUE_DISABLE_SIGNUP: 'false'
 
   storage:
-    image: supabase/storage-api:v0.54.1
+    image: supabase/storage-api:v1.25.9
     container_name: hello-ci-storage-${TAG}
     restart: always
     depends_on:
@@ -78,7 +78,7 @@ services:
       S3_REGION: ${S3_REGION}
 
   studio:
-    image: supabase/studio:20240506-8e5738f
+    image: supabase/studio:2025.07.14-sha-80b9b6f
     container_name: hello-ci-studio-${TAG}
     restart: always
     depends_on:
